@@ -99,8 +99,9 @@ async function addProduct(){
   const price=Number(document.getElementById("newPrice").value);
   const stock=Number(document.getElementById("newStock").value||0);
   if(!name || !Number.isFinite(price) || price<0 || !Number.isInteger(stock) || stock<0) return alert("Informe nome, preço e estoque válidos.");
-    const file=document.getElementById("newImageFile").files[0];
-  if(!file)return alert("Escolha uma foto do produto.");
+  let file=document.getElementById("newImageFile").files[0];
+  if(!file && generatedImageDataURI)file=await (await fetch(generatedImageDataURI)).blob();
+  if(!file)return alert("Gere uma imagem com IA ou escolha uma foto do produto.");
   if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>5*1024*1024)return alert("Use JPG, PNG ou WebP com até 5 MB.");
   const extension=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg";
   const imagePath=currentUser.id+"/"+crypto.randomUUID()+"."+extension;
@@ -113,6 +114,8 @@ async function addProduct(){
   ["newName","newPrice","newDesc"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("newImageFile").value="";
   document.getElementById("imagePreview").style.display="none";
+  generatedImageDataURI=null;
+  document.getElementById("aiImageStatus").textContent="Preencha nome e descrição para criar uma imagem ilustrativa do produto.";
   document.getElementById("newStock").value="0";
   await loadProducts(); await loadMyProducts(); alert("Produto publicado no catálogo!");
 }
