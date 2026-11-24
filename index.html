@@ -92,7 +92,7 @@ function showAuthState(){
 async function signUp(){
   const email=document.getElementById("authEmail").value.trim(),password=document.getElementById("authPassword").value;
   if(!email||password.length<6)return alert("Informe e-mail e senha com pelo menos 6 caracteres.");
-  const {data,error}=await supabaseClient.auth.signUp({email,password});
+  const {data,error}=await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+"/"}});
   document.getElementById("authMessage").textContent=error?error.message:(data.session?"Conta criada. Você já pode cadastrar sua loja.":"Conta criada. Confirme o e-mail enviado para depois entrar.");
   if(data.session){currentUser=data.user;await refreshSeller();}
 }
