@@ -123,7 +123,7 @@ function setTheme(color){if(!/^#[0-9a-f]{6}$/i.test(color))return;document.docum
 function startPayment(){document.getElementById("paymentStatus").textContent="O checkout ainda não está conectado a um provedor de pagamentos. Escolha um provedor para habilitar cobranças reais com segurança."}
 function render(){
 let cats=["Todos",...new Set(products.map(p=>p.cat))];
-document.getElementById("filters").innerHTML=cats.map(c=>`<button class="${category===c?'active':''}" onclick="category='${safe(c)}';render()">${safe(c)}</button>`).join("");
+document.getElementById("filters").innerHTML=cats.map(c=>`<button class="${category===c?'active':''}" data-cat="${safe(c)}" onclick="category=this.dataset.cat;render()">${safe(c)}</button>`).join("");
 let q=document.getElementById("search").value.toLowerCase(),list=products.filter(p=>(category==="Todos"||p.cat===category)&&[p.name,p.store,p.desc].join(" ").toLowerCase().includes(q));
 let sort=document.getElementById("sort").value;if(sort==="low")list.sort((a,b)=>a.price-b.price);if(sort==="high")list.sort((a,b)=>b.price-a.price);
 document.getElementById("products").innerHTML=list.length?list.map(p=>`<article class="card" onclick="openProduct('${p.id}')"><div class="pic">${p.image_url?`<img src="${safe(p.image_url)}" alt="${safe(p.name)}" style="width:100%;height:100%;object-fit:cover">`:(p.emoji||"🛍️")}</div><div class="body"><div class="muted">${safe(p.cat)}</div><b>${safe(p.name)}</b><div class="price">${money(p.price)}</div><div class="muted">${safe(p.store)}</div><p class="muted">${safe(p.desc||"")}</p><button onclick="event.stopPropagation();openProduct('${p.id}')">Ver produto e opções</button></div></article>`).join(""):'<p>Nenhum produto encontrado.</p>';
@@ -165,7 +165,7 @@ function openProduct(id){
  let h='<div class="product-detail"><div class="pic">';
  h+=p.image_url?'<img src="'+safe(p.image_url)+'" alt="'+safe(p.name)+'" style="width:100%;height:100%;object-fit:contain">':(p.emoji||'🛍️');
  h+='</div><div><div class="muted">'+safe(p.store)+' • '+safe(p.cat)+'</div><h2>'+safe(p.name)+'</h2><div class="price">'+money(p.price)+'</div><p>'+safe(p.desc||'')+'</p><b>Escolha uma opção</b><div class="option-list" id="variantOptions">';
- h+=vs.map(v=>'<button type="button" onclick="selectVariant(this,\''+safe(v)+'\')">'+safe(v)+'</button>').join('');
+ h+=vs.map(v=>'<button type="button" data-variant="'+safe(v)+'" onclick="selectVariant(this,this.dataset.variant)">'+safe(v)+'</button>').join('');
  h+='</div><p class="muted">Estoque disponível: '+(p.variants&&p.variants.length?p.variants.reduce((a,v)=>a+Number(v.stock||0),0):Number(p.stock||0))+'</p><button style="width:100%" onclick="addSelectedToCart(\''+p.id+'\')">Adicionar à sacola</button></div></div>';
  document.getElementById('productDetail').innerHTML=h;document.getElementById('productModal').style.display='grid';
 }
@@ -218,7 +218,7 @@ async function checkout(){
 async function drawOrders(){
  const target=document.getElementById("orders");if(!target)return;
  if(!currentUser){target.textContent='Entre para consultar seus pedidos.';return;}
- const {data,error}=await supabaseClient.from('orders').select('id,total,status,delivery_method,created_at,buyer_name,order_items(product_name,variant_label,quantity,unit_price)').order('created_at',{ascending:false}).limit(50);
+ const {data,error}=await supabaseClient.rpc('marketplace_visible_orders');
  if(error){target.textContent='Não foi possível carregar pedidos: '+error.message;return;}
  target.innerHTML=(data||[]).length?(data||[]).map(o=>'<div class="row"><span><b>Pedido '+safe(o.id.slice(0,8))+'</b><br><small>'+safe(o.status)+' • '+new Date(o.created_at).toLocaleString('pt-BR')+'</small><br>'+((o.order_items||[]).map(x=>safe(x.product_name||'Produto')+' ('+safe(x.variant_label||'Padrão')+') × '+x.quantity).join(', '))+'</span><b>'+money(Number(o.total))+'</b></div>').join(''):'Nenhum pedido encontrado.';
 }
