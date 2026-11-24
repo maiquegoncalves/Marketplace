@@ -25,11 +25,80 @@ input,select{border:1px solid #ccc;border-radius:7px;padding:12px;font-size:15px
 .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.formgrid label{font-size:13px}.formgrid input,.formgrid select{margin-top:5px}.wide{grid-column:1/-1}
 .note{background:#f2f2f2;padding:12px;border-radius:8px;font-size:13px;color:#555;line-height:1.45}
 @media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:480px){.grid{gap:8px}.pic{height:100px}.body{padding:9px}.top{align-items:flex-start}.formgrid{grid-template-columns:1fr}.wide{grid-column:auto}}
+
+/* Visual refresh — Vitrine da Cidade */
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#172522;background:#fbfcfa;--ink:#172522;--muted:#66736e;--green:#087f63;--green-dark:#075c49;--mint:#e8f4ee;--line:#e4ebe6;--paper:#fff}
+body{background:#fbfcfa;color:var(--ink);-webkit-font-smoothing:antialiased}
+header{background:rgba(255,255,255,.94);border-bottom:1px solid var(--line);box-shadow:0 4px 18px #18372a0a;backdrop-filter:blur(14px)}
+.wrap{max-width:1200px;padding:18px 24px}
+.logo{font-size:19px;letter-spacing:-.65px;color:var(--ink);display:flex;align-items:center;gap:11px}
+.logo:before{content:"V";display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:linear-gradient(145deg,#0d9b74,#075b49);color:white;font-size:23px;font-weight:900;box-shadow:0 7px 16px #087f6330}
+.logo small{font-size:9px;letter-spacing:2px;color:#74827b;margin-top:4px}
+header .top>div:last-child{display:flex;gap:9px;align-items:center}
+button{background:var(--green);border:1px solid var(--green);border-radius:11px;padding:12px 17px;font-size:13px;transition:transform .18s,background .18s,box-shadow .18s}
+button:hover{background:var(--green-dark);border-color:var(--green-dark);transform:translateY(-1px);box-shadow:0 7px 18px #087f6324}
+button.light{background:#fff;color:var(--ink);border-color:var(--line)}
+button.light:hover{background:var(--mint);border-color:#b9d8c8;box-shadow:none}
+.hero{position:relative;overflow:hidden;background:radial-gradient(ellipse at 78% 38%,#d5eee2 0,transparent 35%),linear-gradient(115deg,#f0f7f2 0%,#f8faf6 54%,#e7f2eb 100%);padding:56px 0 62px;border-bottom:1px solid #e3eee6}
+.hero:after{content:"";position:absolute;width:430px;height:430px;border:1px solid #b6d6c5;border-radius:50%;right:-130px;top:-230px;box-shadow:0 0 0 35px #d5e9dc55,0 0 0 75px #d5e9dc33;pointer-events:none}
+.hero-inner{position:relative;z-index:1;display:grid;grid-template-columns:1.15fr .85fr;align-items:center;gap:32px;min-height:340px}
+.hero-copy{max-width:660px}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;padding:8px 12px;border:1px solid #cce2d4;background:#ffffffb8;border-radius:30px;color:var(--green-dark);font-size:10px;font-weight:850;letter-spacing:1.2px}
+.eyebrow-dot{width:7px;height:7px;border-radius:50%;background:#0b9a70;box-shadow:0 0 0 4px #0b9a701c}
+.hero h1{font-size:clamp(36px,4.7vw,60px);line-height:1.04;max-width:680px;margin:20px 0 15px;letter-spacing:-2.8px;font-weight:850;color:#16372d}
+.hero h1 em{font-style:normal;color:var(--green)}
+.hero p{font-size:16px;line-height:1.7;color:#5b6d64;max-width:570px;margin:0}
+.search{margin-top:25px;padding:7px;background:#fff;border:1px solid #e1eae3;border-radius:15px;box-shadow:0 12px 35px #1d533313;max-width:620px}
+.search input{border:0;outline:0;padding:13px 14px;background:transparent}
+.search input:focus{box-shadow:none}
+.search select{width:auto;min-width:130px;background:#f2f7f3;border-color:#e4ece6}
+.hero-note{margin-top:15px;color:#60766a;font-size:12px;font-weight:600}
+.hero-note span{color:var(--green);margin-right:5px}
+.hero-art{height:300px;position:relative;display:grid;place-items:center}
+.art-orbit{position:absolute;width:280px;height:280px;border:1px solid #b6d9c3;border-radius:50%;box-shadow:0 0 0 24px #d9ebdf70,0 0 0 52px #d9ebdf40}
+.art-card{position:absolute;border-radius:22px;box-shadow:0 22px 50px #164f3824}
+.art-card-back{width:180px;height:205px;right:15%;top:30px;background:linear-gradient(145deg,#0b8d68,#075a49);color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:66px;transform:rotate(9deg)}
+.art-card-back small{font-size:9px;letter-spacing:2px;margin-top:13px;font-weight:800}
+.art-card-front{width:190px;height:205px;left:13%;bottom:13px;padding:24px;background:#fff;display:flex;flex-direction:column;justify-content:center;gap:5px;transform:rotate(-7deg);font-size:23px;letter-spacing:-.8px}
+.art-card-front small{font-size:8px;letter-spacing:1.5px;color:#75867c;margin-top:15px;font-weight:800}
+.art-highlight{color:var(--green)}
+.art-spark{position:absolute;right:20px;top:13px;color:#e2a84d;font-size:25px}
+.art-tag{position:absolute;right:0;bottom:8px;padding:11px 15px;background:white;border:1px solid #e4eee7;border-radius:30px;box-shadow:0 9px 25px #214d3518;font-size:11px;font-weight:800;color:#426354}
+.art-tag span{color:#e56b70;margin-left:6px}
+main.wrap{padding-top:35px;padding-bottom:25px}
+main h2{font-size:25px;letter-spacing:-.8px;margin:0 0 17px;color:#1c332a}
+.filters{gap:9px;margin:0 0 22px}
+.filters button{background:#fff;color:#53645b;border:1px solid #e2eae4;padding:9px 15px;border-radius:30px;font-size:12px}
+.filters button.active{background:#e5f3eb;color:#076348;border-color:#b9ddc8;box-shadow:inset 0 0 0 1px #b9ddc8}
+.grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+.card{background:#fff;border:1px solid #e6ece7;border-radius:17px;box-shadow:0 4px 15px #173a2808;transition:transform .2s,box-shadow .2s,border-color .2s}
+.card:hover{transform:translateY(-5px);border-color:#c9dfd0;box-shadow:0 16px 34px #173a2815}
+.pic{height:205px;background:linear-gradient(145deg,#f0f5f1,#e8f0ea);overflow:hidden;color:#88a194}
+.card .pic img{transition:transform .35s}
+.card:hover .pic img{transform:scale(1.045)}
+.body{padding:16px}
+.body>b{display:block;font-size:15px;line-height:1.4;margin-top:5px;color:#20372d}
+.muted{color:#7b8981;font-size:12px}
+.price{font-size:20px;color:#087454;margin:9px 0;font-weight:850;letter-spacing:-.5px}
+.card .body>button{width:100%;margin-top:8px}
+footer{background:#142f26;color:#d6e5dc;border:0;margin-top:55px}
+footer .wrap{padding-top:28px;padding-bottom:28px;line-height:1.8}
+.panel{background:#0d2119a8;backdrop-filter:blur(4px)}
+.drawer{box-shadow:-20px 0 60px #0002}
+.modal{background:#0d2119a8;backdrop-filter:blur(4px)}
+.modalbox{border:1px solid #e4ece6;border-radius:18px;box-shadow:0 24px 80px #0003;padding:24px}
+input,select{border:1px solid #dce6df;border-radius:10px;color:var(--ink);background:#fff}
+input:focus,select:focus{outline:3px solid #0b95631c;border-color:#6dbb97}
+.note{background:#eef6f0;color:#5e7166;border:1px solid #dcebe0;border-radius:11px}
+.formgrid label{color:#4f6157;font-weight:650}
+@media(max-width:900px){.hero-inner{grid-template-columns:1fr .72fr;gap:10px}.hero-art{transform:scale(.88);transform-origin:center}.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.pic{height:180px}}
+@media(max-width:650px){.wrap{padding:14px 16px}.top{align-items:center}.logo{font-size:15px;gap:8px}.logo:before{width:35px;height:35px;font-size:20px;border-radius:11px}.logo small{font-size:8px;letter-spacing:1.4px}header .top>div:last-child{gap:6px}header button{padding:10px 11px;font-size:11px}.hero{padding:38px 0 35px}.hero-inner{display:block;min-height:0}.hero h1{font-size:clamp(36px,10vw,48px);letter-spacing:-2px;margin-top:17px}.hero p{font-size:14px;line-height:1.6}.hero-art{height:175px;max-width:340px;margin:12px auto -5px;transform:scale(.76);transform-origin:center}.art-orbit{width:225px;height:225px}.art-card-back{width:140px;height:155px;right:13%;top:8px;font-size:52px}.art-card-front{width:150px;height:160px;left:13%;bottom:2px;padding:18px;font-size:19px}.art-card-front small{margin-top:9px}.art-tag{right:2%;bottom:-2px;font-size:9px;padding:9px 12px}.search{gap:4px;margin-top:20px;padding:5px;border-radius:13px}.search input{font-size:13px;padding:11px 9px}.search select{min-width:96px;max-width:110px!important;font-size:11px;padding:10px 6px}main.wrap{padding-top:27px}main h2{font-size:21px}.filters{flex-wrap:nowrap;overflow-x:auto;padding:2px 0 10px;margin-bottom:13px;scrollbar-width:none}.filters::-webkit-scrollbar{display:none}.filters button{white-space:nowrap;flex:0 0 auto;padding:9px 13px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pic{height:clamp(120px,38vw,175px)}.body{padding:11px}.body>b{font-size:13px}.price{font-size:17px;margin:7px 0}.body .muted{font-size:10px}.card .body>button{font-size:11px;padding:10px 7px;border-radius:9px}.modalbox{padding:17px}.drawer{padding:15px}.formgrid{grid-template-columns:1fr}.wide{grid-column:auto}footer{margin-top:35px}footer .wrap{font-size:11px}}
+@media(max-width:360px){.logo{font-size:12px}.logo:before{width:31px;height:31px}.top{gap:5px}header button{padding:9px 8px;font-size:10px}.grid{gap:8px}.body{padding:9px}.hero h1{font-size:34px}}
 </style>
 </head>
 <body>
 <header><div class="wrap top"><div class="logo">VITRINE DA CIDADE<small>PARANAPANEMA • SP</small></div><div><button class="light" onclick="openSeller()">Área do lojista</button> <button onclick="openCart()">Sacola (<span id="count">0</span>)</button></div></div></header>
-<section class="hero"><div class="wrap"><h1>O comércio da nossa cidade, em um só lugar.</h1><p>Encontre produtos das lojas de Paranapanema e compre com praticidade.</p><div class="search"><input id="search" placeholder="Buscar produto ou loja..." oninput="render()"><select id="sort" onchange="render()" style="max-width:155px"><option value="featured">Destaques</option><option value="low">Menor preço</option><option value="high">Maior preço</option></select></div></div></section>
+<section class="hero"><div class="wrap hero-inner"><div class="hero-copy"><span class="eyebrow"><span class="eyebrow-dot"></span> COMPRE PERTO. VALORIZE O LOCAL.</span><h1>O melhor da nossa cidade está <em>mais perto</em> de você.</h1><p>Descubra produtos, encontre novas lojas e fortaleça o comércio de Paranapanema em um só lugar.</p><div class="search"><input id="search" placeholder="O que você está procurando?" oninput="render()"><select id="sort" onchange="render()" aria-label="Ordenar produtos"><option value="featured">Destaques</option><option value="low">Menor preço</option><option value="high">Maior preço</option></select></div><div class="hero-note"><span>✦</span> Encontre novidades das lojas da sua cidade</div></div><div class="hero-art" aria-hidden="true"><div class="art-orbit"></div><div class="art-card art-card-back">🛍️<small>COMÉRCIO LOCAL</small></div><div class="art-card art-card-front"><span class="art-spark">✦</span><b>Descubra.</b><b>Encontre.</b><b class="art-highlight">Valorize.</b><small>PARANAPANEMA • SP</small></div><div class="art-tag">Feito perto de você <span>♥</span></div></div></div></section>
 <main class="wrap"><h2>Produtos em destaque</h2><div class="filters" id="filters"></div><div class="grid" id="products"></div></main>
 <footer><div class="wrap">Vitrine da Cidade • Paranapanema – SP<br>Versão demonstrativa: os dados ficam somente neste navegador. Não há cobrança nem envio real de pedidos.</div></footer>
 <div class="panel" id="cartPanel" onclick="if(event.target.id==='cartPanel')closeCart()"><div class="drawer"><div class="top"><h2>Sua sacola</h2><button class="light" onclick="closeCart()">Fechar</button></div><div id="cartLines"></div><div class="total">Total: <span id="total">R$ 0,00</span></div><label>Nome<input id="buyer" placeholder="Seu nome"></label><br><br><label>Contato<input id="contact" placeholder="Telefone para contato"></label><br><br><label>Recebimento<select id="delivery"><option>Retirada na loja</option><option>Entrega pela loja</option><option>Entregador parceiro</option></select></label><br><br><button style="width:100%" onclick="checkout()">Registrar pedido demonstrativo</button><p class="note">Simulação local. Não há pagamento ou pedido real nesta versão.</p></div></div>
