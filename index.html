@@ -219,6 +219,15 @@ async function drawOrders(){
  if(error){target.textContent='Não foi possível carregar pedidos: '+error.message;return;}
  target.innerHTML=(data||[]).length?(data||[]).map(o=>'<div class="row"><span><b>Pedido '+safe(o.id.slice(0,8))+'</b><br><small>'+safe(o.status)+' • '+new Date(o.created_at).toLocaleString('pt-BR')+'</small><br>'+((o.order_items||[]).map(x=>safe(x.product_name||'Produto')+' ('+safe(x.variant_label||'Padrão')+') × '+x.quantity).join(', '))+'</span><b>'+money(Number(o.total))+'</b></div>').join(''):'Nenhum pedido encontrado.';
 }
+async function loadProducts(){
+ const {data,error}=await supabaseClient.from("products").select("id,name,description,category,price,stock,image_url,stores(name)").eq("active",true).order("created_at",{ascending:false});
+ if(error){console.error("Falha ao carregar produtos:",error);document.getElementById("products").innerHTML='<p>Não foi possível carregar o catálogo. Atualize a página.</p>';return;}
+ const ids=(data||[]).map(p=>p.id);let variantRows=[];
+ if(ids.length){const {data:rows,error:variantError}=await supabaseClient.from("product_variants").select("id,product_id,label,stock,active").in("product_id",ids);if(variantError)console.error("Falha ao carregar opções:",variantError);else variantRows=rows||[];}
+ products=(data||[]).map(p=>({id:p.id,name:p.name,store:p.stores?.name||"Loja local",cat:p.category,price:Number(p.price),desc:p.description||"",emoji:"🛍️",image_url:p.image_url,stock:p.stock,variants:variantRows.filter(v=>v.product_id===p.id&&v.active).map(v=>({id:v.id,label:v.label,stock:v.stock}))}));
+ render();drawCart();
+}
+
 function openSeller(){document.getElementById("sellerModal").style.display="grid";drawOrders()}
 function closeSeller(){document.getElementById("sellerModal").style.display="none"}
 async function addProduct(){
