@@ -1,3 +1,35 @@
+async function addProduct(){
+ if(!currentUser||!currentStore)return alert("Entre e cadastre sua loja primeiro.");
+ const name=document.getElementById("newName").value.trim(),price=Number(document.getElementById("newPrice").value);
+ const stock=Number(document.getElementById("newStock").value||0),rawVariants=document.getElementById("newVariants").value.trim();
+ if(!name||!Number.isFinite(price)||price<=0||!Number.isInteger(stock)||stock<0)return alert("Informe nome, preço e estoque válidos.");
+ const variants=[];
+ if(rawVariants){
+  for(const part of rawVariants.split(",")){const m=part.trim().match(/^(.+):([0-9]+)$/);if(!m)return alert("Use o formato opção:estoque, por exemplo P:5, M:8, G:3.");variants.push({label:m[1].trim(),stock:Number(m[2])});}
+  if(new Set(variants.map(v=>v.label.toLowerCase())).size!==variants.length)return alert("Não repita opções/tamanhos.");
+  if(variants.reduce((a,v)=>a+v.stock,0)!==stock)return alert("O estoque total deve ser igual à soma dos estoques por opção.");
+ }
+ let file=document.getElementById("newImageFile").files[0];
+ if(!file&&generatedImageDataURI)file=await(await fetch(generatedImageDataURI)).blob();
+ if(!file)return alert("Escolha uma foto ou gere uma imagem ilustrativa.");
+ if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>5*1024*1024)return alert("Use JPG, PNG ou WebP com até 5 MB.");
+ const extension=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg",imagePath=currentUser.id+"/"+crypto.randomUUID()+"."+extension;
+ const {error:uploadError}=await supabaseClient.storage.from("product-images").upload(imagePath,file,{contentType:file.type,upsert:false});
+ if(uploadError)return alert("Falha ao enviar a foto: "+uploadError.message);
+ const {data:publicImage}=supabaseClient.storage.from("product-images").getPublicUrl(imagePath);
+ const payload={store_id:currentStore.id,name,description:document.getElementById("newDesc").value.trim(),category:document.getElementById("newCat").value,price,stock,image_url:publicImage.publicUrl,active:true};
+ const {data:product,error}=await supabaseClient.from("products").insert(payload).select("id").single();
+ if(error){await supabaseClient.storage.from("product-images").remove([imagePath]);return alert("Não foi possível publicar: "+error.message);}
+ if(variants.length){
+  const {error:variantError}=await supabaseClient.from("product_variants").insert(variants.map(v=>({product_id:product.id,label:v.label,stock:v.stock,active:true})));
+  if(variantError){await supabaseClient.from("products").delete().eq("id",product.id);await supabaseClient.storage.from("product-images").remove([imagePath]);return alert("Falha ao salvar tamanhos/estoque: "+variantError.message);}
+ }
+ ["newName","newPrice","newDesc","newVariants"].forEach(id=>document.getElementById(id).value="");
+ document.getElementById("newImageFile").value="";document.getElementById("imagePreview").style.display="none";generatedImageDataURI=null;
+ document.getElementById("aiImageStatus").textContent="Preencha nome e descrição para criar uma imagem ilustrativa do produto.";
+ document.getElementById("newStock").value="0";
+ await loadProducts();await loadMyProducts();alert("Produto publicado no catálogo com estoque real!");
+}
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -101,8 +133,8 @@ input:focus,select:focus{outline:3px solid #0b95631c;border-color:#6dbb97}
 <section class="hero"><div class="wrap hero-inner"><div class="hero-copy"><span class="eyebrow"><span class="eyebrow-dot"></span> COMPRE PERTO. VALORIZE O LOCAL.</span><h1>O melhor da nossa cidade está <em>mais perto</em> de você.</h1><p>Descubra produtos, encontre novas lojas e fortaleça o comércio de Paranapanema em um só lugar.</p><div class="search"><input id="search" placeholder="O que você está procurando?" oninput="render()"><select id="sort" onchange="render()" aria-label="Ordenar produtos"><option value="featured">Destaques</option><option value="low">Menor preço</option><option value="high">Maior preço</option></select></div><div class="hero-note"><span>✦</span> Encontre novidades das lojas da sua cidade</div></div><div class="hero-art" aria-hidden="true"><div class="art-orbit"></div><div class="art-card art-card-back">🛍️<small>COMÉRCIO LOCAL</small></div><div class="art-card art-card-front"><span class="art-spark">✦</span><b>Descubra.</b><b>Encontre.</b><b class="art-highlight">Valorize.</b><small>PARANAPANEMA • SP</small></div><div class="art-tag">Feito perto de você <span>♥</span></div></div></div></section>
 <main class="wrap"><h2>Produtos em destaque</h2><div class="filters" id="filters"></div><div class="grid" id="products"></div></main>
 <footer><div class="wrap">Vitrine da Cidade • Paranapanema – SP<br>Versão demonstrativa: os dados ficam somente neste navegador. Não há cobrança nem envio real de pedidos.</div></footer>
-<div class="panel" id="cartPanel" onclick="if(event.target.id==='cartPanel')closeCart()"><div class="drawer"><div class="top"><h2>Sua sacola</h2><button class="light" onclick="closeCart()">Fechar</button></div><div id="cartLines"></div><div class="total">Total: <span id="total">R$ 0,00</span></div><label>Nome<input id="buyer" placeholder="Seu nome"></label><br><br><label>Contato<input id="contact" placeholder="Telefone para contato"></label><br><br><label>Recebimento<select id="delivery"><option>Retirada na loja</option><option>Entrega pela loja</option><option>Entregador parceiro</option></select></label><br><br><button style="width:100%" onclick="checkout()">Registrar pedido demonstrativo</button><p class="note">Simulação local. Não há pagamento ou pedido real nesta versão.</p></div></div>
-<div class="modal" id="productModal"><div class="modalbox"><div class="top"><h2 id="detailTitle">Produto</h2><button class="light" onclick="closeProduct()">Fechar</button></div><div id="productDetail"></div></div></div><div class="modal" id="sellerModal"><div class="modalbox"><div class="top"><h2>Área do lojista</h2><button class="light" onclick="closeSeller()">Fechar</button></div><div id="authBox"><p class="note">Entre ou crie sua conta para administrar sua loja. A confirmação do e-mail pode ser solicitada pelo Supabase.</p><div class="formgrid"><label class="wide">E-mail<input id="authEmail" type="email" autocomplete="email" placeholder="voce@email.com"></label><label class="wide">Senha<input id="authPassword" type="password" autocomplete="current-password" placeholder="Mínimo de 6 caracteres"></label></div><br><button onclick="signIn()">Entrar</button> <button class="light" onclick="signUp()">Criar conta</button><p id="authMessage" class="muted"></p></div><div id="sellerArea" style="display:none"><div class="row"><span id="signedEmail" class="muted"></span><button class="light" onclick="signOut()">Sair</button></div><div id="storeSetup"><h3>Cadastre sua loja</h3><div class="formgrid"><label class="wide">Nome da loja<input id="storeName" placeholder="Nome comercial"></label><label class="wide">Descrição<input id="storeDescription" placeholder="O que sua loja oferece?"></label></div><br><button onclick="createStore()">Salvar loja</button></div><div id="productSetup" style="display:none"><h3>Cadastrar produto</h3><div class="formgrid"><label>Produto<input id="newName" placeholder="Nome do produto"></label><label>Categoria<select id="newCat"><option>Roupas</option><option>Calçados</option><option>Underwear</option><option>Acessórios</option><option>Alimentos</option><option>Casa</option><option>Outros</option></select></label><label>Preço (R$)<input id="newPrice" type="number" min="0" step=".01"></label><label>Estoque<input id="newStock" type="number" min="0" step="1" value="0"></label><label class="wide">Descrição<input id="newDesc" placeholder="Descrição curta"></label><div class="wide"><button class="light" onclick="generateProductImage()">✨ Gerar foto com IA pela descrição</button><p id="aiImageStatus" class="muted">Preencha nome e descrição para criar uma imagem ilustrativa do produto.</p></div><label class="wide">Foto do produto<input id="newImageFile" type="file" accept="image/jpeg,image/png,image/webp" onchange="previewProductImage(event)"><small class="muted">JPG, PNG ou WebP • até 5 MB</small><div id="imagePreview" class="pic" style="display:none;margin-top:8px;height:160px"><img id="imagePreviewImg" alt="Prévia da foto" style="max-width:100%;max-height:160px;object-fit:contain"></div></label></div><br><button onclick="addProduct()">Publicar produto</button><h3>Seus produtos</h3><div id="myProducts"></div></div></div><h3>Pedidos de demonstração</h3><div id="orders"></div></div></div>
+<div class="panel" id="cartPanel" onclick="if(event.target.id==='cartPanel')closeCart()"><div class="drawer"><div class="top"><h2>Sua sacola</h2><button class="light" onclick="closeCart()">Fechar</button></div><div id="cartLines"></div><div class="total">Total: <span id="total">R$ 0,00</span></div><label>Nome<input id="buyer" placeholder="Seu nome"></label><br><br><label>Contato<input id="contact" placeholder="Telefone para contato"></label><br><br><label>Recebimento<select id="delivery"><option value="store_pickup">Retirada na loja</option><option value="store_delivery">Entrega pela loja</option><option value="partner_courier">Entregador parceiro</option></select></label><br><br><button style="width:100%" onclick="checkout()">Registrar pedido</button><p class="note">O pedido será salvo no banco. Nenhuma cobrança ou pagamento é realizado nesta etapa.</p></div></div>
+<div class="modal" id="productModal"><div class="modalbox"><div class="top"><h2 id="detailTitle">Produto</h2><button class="light" onclick="closeProduct()">Fechar</button></div><div id="productDetail"></div></div></div><div class="modal" id="sellerModal"><div class="modalbox"><div class="top"><h2>Área do lojista</h2><button class="light" onclick="closeSeller()">Fechar</button></div><div id="authBox"><p class="note">Entre ou crie sua conta para administrar sua loja. A confirmação do e-mail pode ser solicitada pelo Supabase.</p><div class="formgrid"><label class="wide">E-mail<input id="authEmail" type="email" autocomplete="email" placeholder="voce@email.com"></label><label class="wide">Senha<input id="authPassword" type="password" autocomplete="current-password" placeholder="Mínimo de 6 caracteres"></label></div><br><button onclick="signIn()">Entrar</button> <button class="light" onclick="signUp()">Criar conta</button><p id="authMessage" class="muted"></p></div><div id="sellerArea" style="display:none"><div class="row"><span id="signedEmail" class="muted"></span><button class="light" onclick="signOut()">Sair</button></div><div id="storeSetup"><h3>Cadastre sua loja</h3><div class="formgrid"><label class="wide">Nome da loja<input id="storeName" placeholder="Nome comercial"></label><label class="wide">Descrição<input id="storeDescription" placeholder="O que sua loja oferece?"></label></div><br><button onclick="createStore()">Salvar loja</button></div><div id="productSetup" style="display:none"><h3>Cadastrar produto</h3><div class="formgrid"><label>Produto<input id="newName" placeholder="Nome do produto"></label><label>Categoria<select id="newCat"><option>Roupas</option><option>Calçados</option><option>Underwear</option><option>Acessórios</option><option>Alimentos</option><option>Casa</option><option>Outros</option></select></label><label>Preço (R$)<input id="newPrice" type="number" min="0" step=".01"></label><label>Estoque total<input id="newStock" type="number" min="0" step="1" value="0"></label><label class="wide">Tamanhos/opções e estoque (opcional)<input id="newVariants" placeholder="P:5, M:8, G:3"><small class="muted">Informe cada opção e quantidade. A soma deve bater com o estoque total.</small></label><label class="wide">Descrição<input id="newDesc" placeholder="Descrição curta"></label><div class="wide"><button class="light" onclick="generateProductImage()">✨ Gerar foto com IA pela descrição</button><p id="aiImageStatus" class="muted">Preencha nome e descrição para criar uma imagem ilustrativa do produto.</p></div><label class="wide">Foto do produto<input id="newImageFile" type="file" accept="image/jpeg,image/png,image/webp" onchange="previewProductImage(event)"><small class="muted">JPG, PNG ou WebP • até 5 MB</small><div id="imagePreview" class="pic" style="display:none;margin-top:8px;height:160px"><img id="imagePreviewImg" alt="Prévia da foto" style="max-width:100%;max-height:160px;object-fit:contain"></div></label></div><br><button onclick="addProduct()">Publicar produto</button><h3>Seus produtos</h3><div id="myProducts"></div></div></div><h3>Pedidos registrados</h3><div id="orders"></div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const supabaseClient = window.supabase.createClient("https://srcxhfbkodxfgiejacwo.supabase.co","sb_publishable_gyxb8vO-lBD653V70MviUw_RCBII5jH");
@@ -154,17 +186,71 @@ function previewProductImage(event){
   if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>5*1024*1024){event.target.value="";preview.style.display="none";return alert("Use JPG, PNG ou WebP com até 5 MB.");}
   img.src=URL.createObjectURL(file);preview.style.display="grid";
 }
-function variantsFor(p){const c=(p.cat||'').toLowerCase();if(c.includes('calçado'))return ['34','35','36','37','38','39','40','41','42','43','44','45'];if(c==='roupas'||c==='underwear')return ['PP','P','M','G','GG','XG'];return ['Padrão']}
-function openProduct(id){const p=products.find(x=>String(x.id)===String(id));if(!p)return;selectedVariant='';const vs=variantsFor(p);document.getElementById('detailTitle').textContent=p.name;let h='<div class="product-detail"><div class="pic">';h+=p.image_url?'<img src="'+safe(p.image_url)+'" alt="'+safe(p.name)+'" style="width:100%;height:100%;object-fit:contain">':(p.emoji||'🛍️');h+='</div><div><div class="muted">'+safe(p.store)+' • '+safe(p.cat)+'</div><h2>'+safe(p.name)+'</h2><div class="price">'+money(p.price)+'</div><p>'+safe(p.desc||'')+'</p><b>Escolha o tamanho ou opção</b><div class="option-list" id="variantOptions">';h+=vs.map(v=>'<button onclick="selectVariant(this,\''+v+'\')">'+v+'</button>').join('');h+='</div><p class="muted">Estoque: '+(p.stock??'consulte a loja')+'</p><button style="width:100%" onclick="addSelectedToCart(\''+p.id+'\')">Adicionar à sacola</button></div></div>';document.getElementById('productDetail').innerHTML=h;document.getElementById('productModal').style.display='grid'}
+function variantsFor(p){return (p.variants&&p.variants.length?p.variants.map(v=>v.label):['Padrão'])}
+function openProduct(id){
+ const p=products.find(x=>String(x.id)===String(id));if(!p)return;
+ selectedVariant='';const vs=variantsFor(p);
+ document.getElementById('detailTitle').textContent=p.name;
+ let h='<div class="product-detail"><div class="pic">';
+ h+=p.image_url?'<img src="'+safe(p.image_url)+'" alt="'+safe(p.name)+'" style="width:100%;height:100%;object-fit:contain">':(p.emoji||'🛍️');
+ h+='</div><div><div class="muted">'+safe(p.store)+' • '+safe(p.cat)+'</div><h2>'+safe(p.name)+'</h2><div class="price">'+money(p.price)+'</div><p>'+safe(p.desc||'')+'</p><b>Escolha uma opção</b><div class="option-list" id="variantOptions">';
+ h+=vs.map(v=>'<button type="button" onclick="selectVariant(this,\''+safe(v)+'\')">'+safe(v)+'</button>').join('');
+ h+='</div><p class="muted">Estoque disponível: '+(p.variants&&p.variants.length?p.variants.reduce((a,v)=>a+Number(v.stock||0),0):Number(p.stock||0))+'</p><button style="width:100%" onclick="addSelectedToCart(\''+p.id+'\')">Adicionar à sacola</button></div></div>';
+ document.getElementById('productDetail').innerHTML=h;document.getElementById('productModal').style.display='grid';
+}
 function selectVariant(el,v){selectedVariant=v;document.querySelectorAll('#variantOptions button').forEach(b=>b.classList.remove('selected'));el.classList.add('selected')}
 function closeProduct(){document.getElementById('productModal').style.display='none'}
-function addSelectedToCart(id){if(!selectedVariant)return alert('Escolha o tamanho ou opção antes de adicionar.');const found=cart.find(x=>String(x.id)===String(id)&&x.variant===selectedVariant);if(found)found.qty++;else cart.push({id,variant:selectedVariant,qty:1});save();render();closeProduct();openCart()}
+function addSelectedToCart(id){
+ if(!selectedVariant)return alert('Escolha uma opção antes de adicionar.');
+ const p=products.find(x=>String(x.id)===String(id));if(!p)return;
+ const option=p.variants?.find(v=>v.label===selectedVariant);
+ const available=option?Number(option.stock):Number(p.stock);
+ const found=cart.find(x=>String(x.id)===String(id)&&x.variant===selectedVariant);
+ if((found?.qty||0)+1>available)return alert('Quantidade maior que o estoque disponível.');
+ if(found)found.qty++;else cart.push({id,variant:selectedVariant,qty:1});
+ save();render();closeProduct();openCart();
+}
 function addCart(id){openProduct(id)}
 function openCart(){drawCart();document.getElementById("cartPanel").style.display="block"}
 function closeCart(){document.getElementById("cartPanel").style.display="none"}
-function drawCart(){let total=0;const valid=cart.filter(x=>x.qty>0);document.getElementById('cartLines').innerHTML=valid.length?valid.map(it=>{const p=products.find(x=>String(x.id)===String(it.id));if(!p)return '';total+=p.price*it.qty;const i=cart.indexOf(it);return '<div class="row"><span>'+safe(p.name)+'<br><small>'+safe(it.variant)+' • '+money(p.price)+' • '+safe(p.store)+'</small></span><span><button onclick="qty('+i+',-1)">−</button> '+it.qty+' <button onclick="qty('+i+',1)">+</button></span></div>'}).join(''):'Sacola vazia';document.getElementById('total').textContent=money(total)}
-function qty(i,n){if(!cart[i])return;cart[i].qty+=n;if(cart[i].qty<=0)cart.splice(i,1);save();drawCart();render()}
-function checkout(){const items=cart.filter(x=>x.qty>0);if(!items.length)return alert('Adicione produtos à sacola.');const name=document.getElementById('buyer').value.trim(),contact=document.getElementById('contact').value.trim();if(!name||!contact)return alert('Preencha nome e contato.');const lines=items.map(it=>{const p=products.find(x=>String(x.id)===String(it.id));return {name:p.name,store:p.store,variant:it.variant,q:it.qty,price:p.price}});const total=lines.reduce((sum,x)=>sum+x.q*x.price,0);orders.unshift({name,contact,delivery:document.getElementById('delivery').value,lines,total,when:new Date().toLocaleString('pt-BR')});cart=[];save();render();drawCart();drawOrders();closeCart();alert('Pedido de demonstração registrado neste navegador. Nenhum pagamento foi feito.')}
+function drawCart(){
+ let total=0;const valid=cart.filter(x=>x.qty>0);
+ document.getElementById('cartLines').innerHTML=valid.length?valid.map(it=>{
+  const p=products.find(x=>String(x.id)===String(it.id));if(!p)return '';
+  total+=p.price*it.qty;const i=cart.indexOf(it);
+  return '<div class="row"><span>'+safe(p.name)+'<br><small>'+safe(it.variant)+' • '+money(p.price)+' • '+safe(p.store)+'</small></span><span><button onclick="qty('+i+',-1)">−</button> '+it.qty+' <button onclick="qty('+i+',1)">+</button></span></div>';
+ }).join(''):'Sacola vazia';
+ document.getElementById('total').textContent=money(total);
+}
+function qty(i,n){
+ if(!cart[i])return;const item=cart[i],p=products.find(x=>String(x.id)===String(item.id));
+ const option=p?.variants?.find(v=>v.label===item.variant),available=option?Number(option.stock):Number(p?.stock||0);
+ if(n>0&&item.qty+1>available)return alert('Estoque máximo disponível atingido.');
+ item.qty+=n;if(item.qty<=0)cart.splice(i,1);save();drawCart();render();
+}
+async function checkout(){
+ const items=cart.filter(x=>x.qty>0);if(!items.length)return alert('Adicione produtos à sacola.');
+ if(!currentUser){alert('Entre ou crie uma conta para registrar seu pedido.');openSeller();return;}
+ const name=document.getElementById('buyer').value.trim(),contact=document.getElementById('contact').value.trim();
+ if(name.length<2||contact.length<6)return alert('Preencha nome e contato válidos.');
+ const delivery=document.getElementById('delivery').value;
+ const payload=items.map(it=>({product_id:it.id,variant_label:it.variant,quantity:it.qty}));
+ const button=document.querySelector('#cartPanel button[onclick="checkout()"]');if(button){button.disabled=true;button.textContent='Registrando...';}
+ try{
+  const {data,error}=await supabaseClient.rpc('create_marketplace_order',{p_buyer_name:name,p_buyer_contact:contact,p_delivery_method:delivery,p_items:payload,p_notes:null});
+  if(error)throw error;
+  cart=[];save();render();drawCart();closeCart();await drawOrders();
+  alert('Pedido registrado no banco de dados! Número: '+data);
+ }catch(e){alert('Não foi possível registrar o pedido: '+(e.message||'Erro inesperado.'));}
+ finally{if(button){button.disabled=false;button.textContent='Registrar pedido';}}
+}
+async function drawOrders(){
+ const target=document.getElementById("orders");if(!target)return;
+ if(!currentUser){target.textContent='Entre para consultar seus pedidos.';return;}
+ const {data,error}=await supabaseClient.from('orders').select('id,total,status,delivery_method,created_at,buyer_name,order_items(product_name,variant_label,quantity,unit_price)').order('created_at',{ascending:false}).limit(50);
+ if(error){target.textContent='Não foi possível carregar pedidos: '+error.message;return;}
+ target.innerHTML=(data||[]).length?(data||[]).map(o=>'<div class="row"><span><b>Pedido '+safe(o.id.slice(0,8))+'</b><br><small>'+safe(o.status)+' • '+new Date(o.created_at).toLocaleString('pt-BR')+'</small><br>'+((o.order_items||[]).map(x=>safe(x.product_name||'Produto')+' ('+safe(x.variant_label||'Padrão')+') × '+x.quantity).join(', '))+'</span><b>'+money(Number(o.total))+'</b></div>').join(''):'Nenhum pedido encontrado.';
+}
 function openSeller(){document.getElementById("sellerModal").style.display="grid";drawOrders()}
 function closeSeller(){document.getElementById("sellerModal").style.display="none"}
 async function addProduct(){
@@ -195,10 +281,10 @@ async function addProduct(){
 }
 function drawOrders(){document.getElementById("orders").innerHTML=orders.length?orders.map(o=>`<div class="row"><span><b>${safe(o.name)}</b><br><small>${safe(o.when)} • ${safe(o.delivery)}</small><br>${o.lines.map(x=>safe(x.name)+" ("+safe(x.variant||"Padrão")+") × "+x.q).join(", ")}</span><b>${money(o.total)}</b></div>`).join(""):"Nenhum pedido registrado."}
 async function loadProducts(){
-  const {data,error}=await supabaseClient.from("products").select("id,name,description,category,price,stock,image_url,stores(name)").eq("active",true).order("created_at",{ascending:false});
-  if(error){console.error(error);return;}
-  products=(data||[]).map(p=>({id:p.id,name:p.name,store:p.stores?.name||"Loja local",cat:p.category,price:Number(p.price),desc:p.description||"",emoji:"🛍️",image_url:p.image_url,stock:p.stock}));
-  render();
+ const {data,error}=await supabaseClient.from("products").select("id,name,description,category,price,stock,image_url,stores(name),product_variants(id,label,stock,active)").eq("active",true).order("created_at",{ascending:false});
+ if(error){console.error(error);return;}
+ products=(data||[]).map(p=>({id:p.id,name:p.name,store:p.stores?.name||"Loja local",cat:p.category,price:Number(p.price),desc:p.description||"",emoji:"🛍️",image_url:p.image_url,stock:p.stock,variants:(p.product_variants||[]).filter(v=>v.active).map(v=>({id:v.id,label:v.label,stock:v.stock}))}));
+ render();drawCart();
 }
 function showAuthState(){
   document.getElementById("authBox").style.display=currentUser?"none":"block";
