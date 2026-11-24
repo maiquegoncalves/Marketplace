@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vitrine da Cidade | Paranapanema</title>
+<style>
+:root{font-family:Arial,sans-serif;color:#111;background:#fff}*{box-sizing:border-box}body{margin:0}
+header{border-bottom:1px solid #ddd;position:sticky;top:0;background:white;z-index:2}
+.wrap{max-width:1100px;margin:auto;padding:16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.logo{font-size:21px;font-weight:900}.logo small{display:block;font-size:10px;letter-spacing:2px;color:#666}
+button{background:#111;color:#fff;border:1px solid #111;padding:11px 14px;border-radius:7px;font-weight:bold;cursor:pointer}
+button.light{background:white;color:#111}
+.hero{background:#f2f2f2;padding:38px 0}.hero h1{font-size:clamp(30px,6vw,52px);max-width:650px;margin:0 0 10px;letter-spacing:-2px}.hero p{color:#555;max-width:620px}
+.search{display:flex;gap:8px;margin-top:20px}.search input{flex:1;min-width:0}
+input,select{border:1px solid #ccc;border-radius:7px;padding:12px;font-size:15px;width:100%}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0}.filters button{background:#fff;color:#111;border-color:#ccc}.filters button.active{background:#111;color:#fff}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.card{border:1px solid #e5e5e5;border-radius:10px;overflow:hidden}
+.pic{height:130px;background:#eee;display:grid;place-items:center;font-size:42px}.body{padding:12px}.muted{color:#666;font-size:13px}.price{font-size:18px;font-weight:bold;margin:8px 0}
+.card button{width:100%}h2{margin:26px 0 14px}footer{border-top:1px solid #ddd;color:#666;font-size:13px;margin-top:45px}
+.panel{display:none;position:fixed;inset:0;background:#0008;z-index:5}.drawer{background:#fff;position:absolute;right:0;top:0;height:100%;width:min(430px,100%);padding:18px;overflow:auto}
+.row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #ddd;padding:12px 0}.total{font-weight:bold;font-size:19px;padding:18px 0}
+.modal{display:none;position:fixed;inset:0;background:#0008;z-index:6;place-items:center;padding:12px}.modalbox{background:white;border-radius:12px;padding:20px;width:min(560px,100%);max-height:90vh;overflow:auto}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.formgrid label{font-size:13px}.formgrid input,.formgrid select{margin-top:5px}.wide{grid-column:1/-1}
+.note{background:#f2f2f2;padding:12px;border-radius:8px;font-size:13px;color:#555;line-height:1.45}
+@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:480px){.grid{gap:8px}.pic{height:100px}.body{padding:9px}.top{align-items:flex-start}.formgrid{grid-template-columns:1fr}.wide{grid-column:auto}}
+</style>
+</head>
+<body>
+<header><div class="wrap top"><div class="logo">VITRINE DA CIDADE<small>PARANAPANEMA • SP</small></div><div><button class="light" onclick="openSeller()">Área do lojista</button> <button onclick="openCart()">Sacola (<span id="count">0</span>)</button></div></div></header>
+<section class="hero"><div class="wrap"><h1>O comércio da nossa cidade, em um só lugar.</h1><p>Encontre produtos das lojas de Paranapanema e compre com praticidade.</p><div class="search"><input id="search" placeholder="Buscar produto ou loja..." oninput="render()"><select id="sort" onchange="render()" style="max-width:155px"><option value="featured">Destaques</option><option value="low">Menor preço</option><option value="high">Maior preço</option></select></div></div></section>
+<main class="wrap"><h2>Produtos em destaque</h2><div class="filters" id="filters"></div><div class="grid" id="products"></div></main>
+<footer><div class="wrap">Vitrine da Cidade • Paranapanema – SP<br>Versão demonstrativa: os dados ficam somente neste navegador. Não há cobrança nem envio real de pedidos.</div></footer>
+<div class="panel" id="cartPanel" onclick="if(event.target.id==='cartPanel')closeCart()"><div class="drawer"><div class="top"><h2>Sua sacola</h2><button class="light" onclick="closeCart()">Fechar</button></div><div id="cartLines"></div><div class="total">Total: <span id="total">R$ 0,00</span></div><label>Nome<input id="buyer" placeholder="Seu nome"></label><br><br><label>Contato<input id="contact" placeholder="Telefone para contato"></label><br><br><label>Recebimento<select id="delivery"><option>Retirada na loja</option><option>Entrega pela loja</option><option>Entregador parceiro</option></select></label><br><br><button style="width:100%" onclick="checkout()">Registrar pedido demonstrativo</button><p class="note">Simulação local. Não há pagamento ou pedido real nesta versão.</p></div></div>
+<div class="modal" id="sellerModal"><div class="modalbox"><div class="top"><h2>Área do lojista</h2><button class="light" onclick="closeSeller()">Fechar</button></div><p class="note">Demonstração sem login e sem publicação de produtos online. A versão real precisará de autenticação e permissões seguras.</p><h3>Cadastrar produto</h3><div class="formgrid"><label>Produto<input id="newName" placeholder="Nome do produto"></label><label>Loja<input id="newStore" placeholder="Nome da loja"></label><label>Categoria<select id="newCat"><option>Roupas</option><option>Calçados</option><option>Underwear</option><option>Acessórios</option></select></label><label>Preço (R$)<input id="newPrice" type="number" min="0" step=".01"></label><label class="wide">Descrição<input id="newDesc" placeholder="Descrição curta"></label></div><br><button onclick="addProduct()">Salvar produto neste aparelho</button><h3>Pedidos registrados</h3><div id="orders"></div></div></div>
+<script>
+const initial=[
+{id:1,name:"Camiseta básica",store:"Loja Central",cat:"Roupas",price:49.90,desc:"Peça casual para o dia a dia.",emoji:"👕"},
+{id:2,name:"Tênis casual",store:"Passo Certo",cat:"Calçados",price:139.90,desc:"Estilo casual.",emoji:"👟"},
+{id:3,name:"Kit de cuecas",store:"Moda & Cia",cat:"Underwear",price:59.90,desc:"Kit básico de uso diário.",emoji:"🩳"},
+{id:4,name:"Boné clássico",store:"Acessórios Avenida",cat:"Acessórios",price:39.90,desc:"Acessório casual.",emoji:"🧢"}];
+let products=JSON.parse(localStorage.getItem("vdc_products")||"null")||initial;
+let cart=JSON.parse(localStorage.getItem("vdc_cart")||"{}");
+let orders=JSON.parse(localStorage.getItem("vdc_orders")||"[]"), category="Todos";
+const money=n=>n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const safe=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function save(){localStorage.setItem("vdc_products",JSON.stringify(products));localStorage.setItem("vdc_cart",JSON.stringify(cart));localStorage.setItem("vdc_orders",JSON.stringify(orders))}
+function render(){
+let cats=["Todos",...new Set(products.map(p=>p.cat))];
+document.getElementById("filters").innerHTML=cats.map(c=>`<button class="${category===c?'active':''}" onclick="category='${safe(c)}';render()">${safe(c)}</button>`).join("");
+let q=document.getElementById("search").value.toLowerCase(),list=products.filter(p=>(category==="Todos"||p.cat===category)&&[p.name,p.store,p.desc].join(" ").toLowerCase().includes(q));
+let sort=document.getElementById("sort").value;if(sort==="low")list.sort((a,b)=>a.price-b.price);if(sort==="high")list.sort((a,b)=>b.price-a.price);
+document.getElementById("products").innerHTML=list.length?list.map(p=>`<article class="card"><div class="pic">${p.emoji||"🛍️"}</div><div class="body"><div class="muted">${safe(p.cat)}</div><b>${safe(p.name)}</b><div class="price">${money(p.price)}</div><div class="muted">${safe(p.store)}</div><p class="muted">${safe(p.desc||"")}</p><button onclick="addCart(${p.id})">Adicionar à sacola</button></div></article>`).join(""):'<p>Nenhum produto encontrado.</p>';
+document.getElementById("count").textContent=Object.values(cart).reduce((a,b)=>a+b,0)}
+function addCart(id){cart[id]=(cart[id]||0)+1;save();render()}
+function openCart(){drawCart();document.getElementById("cartPanel").style.display="block"}
+function closeCart(){document.getElementById("cartPanel").style.display="none"}
+function drawCart(){let total=0,entries=Object.entries(cart).filter(([id,q])=>q>0);document.getElementById("cartLines").innerHTML=entries.length?entries.map(([id,q])=>{let p=products.find(x=>x.id==id);if(!p)return "";total+=p.price*q;return `<div class="row"><span>${safe(p.name)}<br><small>${money(p.price)} • ${safe(p.store)}</small></span><span><button onclick="qty(${id},-1)">−</button> ${q} <button onclick="qty(${id},1)">+</button></span></div>`}).join(""):"Sacola vazia";document.getElementById("total").textContent=money(total)}
+function qty(id,n){cart[id]=(cart[id]||0)+n;if(cart[id]<=0)delete cart[id];save();drawCart();render()}
+function checkout(){let items=Object.entries(cart).filter(([id,q])=>q>0);if(!items.length)return alert("Adicione produtos à sacola.");let name=document.getElementById("buyer").value.trim(),contact=document.getElementById("contact").value.trim();if(!name||!contact)return alert("Preencha nome e contato.");let lines=items.map(([id,q])=>{let p=products.find(x=>x.id==id);return {name:p.name,store:p.store,q,price:p.price}});let total=lines.reduce((s,x)=>s+x.q*x.price,0);orders.unshift({name,contact,delivery:document.getElementById("delivery").value,lines,total,when:new Date().toLocaleString("pt-BR")});cart={};save();render();drawCart();drawOrders();closeCart();alert("Pedido de demonstração registrado neste navegador. Nenhum pagamento foi feito.")}
+function openSeller(){document.getElementById("sellerModal").style.display="grid";drawOrders()}
+function closeSeller(){document.getElementById("sellerModal").style.display="none"}
+function addProduct(){let name=document.getElementById("newName").value.trim(),store=document.getElementById("newStore").value.trim(),price=Number(document.getElementById("newPrice").value);if(!name||!store||!Number.isFinite(price)||price<0)return alert("Informe produto, loja e preço válido.");products.push({id:Date.now(),name,store,cat:document.getElementById("newCat").value,price,desc:document.getElementById("newDesc").value.trim(),emoji:"🛍️"});save();render();alert("Produto salvo apenas neste navegador.")}
+function drawOrders(){document.getElementById("orders").innerHTML=orders.length?orders.map(o=>`<div class="row"><span><b>${safe(o.name)}</b><br><small>${safe(o.when)} • ${safe(o.delivery)}</small><br>${o.lines.map(x=>safe(x.name)+" × "+x.q).join(", ")}</span><b>${money(o.total)}</b></div>`).join(""):"Nenhum pedido registrado."}
+render();
+</script>
+</body></html>
