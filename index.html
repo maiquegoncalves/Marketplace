@@ -1,35 +1,3 @@
-async function addProduct(){
- if(!currentUser||!currentStore)return alert("Entre e cadastre sua loja primeiro.");
- const name=document.getElementById("newName").value.trim(),price=Number(document.getElementById("newPrice").value);
- const stock=Number(document.getElementById("newStock").value||0),rawVariants=document.getElementById("newVariants").value.trim();
- if(!name||!Number.isFinite(price)||price<=0||!Number.isInteger(stock)||stock<0)return alert("Informe nome, preço e estoque válidos.");
- const variants=[];
- if(rawVariants){
-  for(const part of rawVariants.split(",")){const m=part.trim().match(/^(.+):([0-9]+)$/);if(!m)return alert("Use o formato opção:estoque, por exemplo P:5, M:8, G:3.");variants.push({label:m[1].trim(),stock:Number(m[2])});}
-  if(new Set(variants.map(v=>v.label.toLowerCase())).size!==variants.length)return alert("Não repita opções/tamanhos.");
-  if(variants.reduce((a,v)=>a+v.stock,0)!==stock)return alert("O estoque total deve ser igual à soma dos estoques por opção.");
- }
- let file=document.getElementById("newImageFile").files[0];
- if(!file&&generatedImageDataURI)file=await(await fetch(generatedImageDataURI)).blob();
- if(!file)return alert("Escolha uma foto ou gere uma imagem ilustrativa.");
- if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>5*1024*1024)return alert("Use JPG, PNG ou WebP com até 5 MB.");
- const extension=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg",imagePath=currentUser.id+"/"+crypto.randomUUID()+"."+extension;
- const {error:uploadError}=await supabaseClient.storage.from("product-images").upload(imagePath,file,{contentType:file.type,upsert:false});
- if(uploadError)return alert("Falha ao enviar a foto: "+uploadError.message);
- const {data:publicImage}=supabaseClient.storage.from("product-images").getPublicUrl(imagePath);
- const payload={store_id:currentStore.id,name,description:document.getElementById("newDesc").value.trim(),category:document.getElementById("newCat").value,price,stock,image_url:publicImage.publicUrl,active:true};
- const {data:product,error}=await supabaseClient.from("products").insert(payload).select("id").single();
- if(error){await supabaseClient.storage.from("product-images").remove([imagePath]);return alert("Não foi possível publicar: "+error.message);}
- if(variants.length){
-  const {error:variantError}=await supabaseClient.from("product_variants").insert(variants.map(v=>({product_id:product.id,label:v.label,stock:v.stock,active:true})));
-  if(variantError){await supabaseClient.from("products").delete().eq("id",product.id);await supabaseClient.storage.from("product-images").remove([imagePath]);return alert("Falha ao salvar tamanhos/estoque: "+variantError.message);}
- }
- ["newName","newPrice","newDesc","newVariants"].forEach(id=>document.getElementById(id).value="");
- document.getElementById("newImageFile").value="";document.getElementById("imagePreview").style.display="none";generatedImageDataURI=null;
- document.getElementById("aiImageStatus").textContent="Preencha nome e descrição para criar uma imagem ilustrativa do produto.";
- document.getElementById("newStock").value="0";
- await loadProducts();await loadMyProducts();alert("Produto publicado no catálogo com estoque real!");
-}
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -254,37 +222,36 @@ async function drawOrders(){
 function openSeller(){document.getElementById("sellerModal").style.display="grid";drawOrders()}
 function closeSeller(){document.getElementById("sellerModal").style.display="none"}
 async function addProduct(){
-  if(!currentUser || !currentStore) return alert("Entre e cadastre sua loja primeiro.");
-  const name=document.getElementById("newName").value.trim();
-  const price=Number(document.getElementById("newPrice").value);
-  const stock=Number(document.getElementById("newStock").value||0);
-  if(!name || !Number.isFinite(price) || price<0 || !Number.isInteger(stock) || stock<0) return alert("Informe nome, preço e estoque válidos.");
-  let file=document.getElementById("newImageFile").files[0];
-  if(!file && generatedImageDataURI)file=await (await fetch(generatedImageDataURI)).blob();
-  if(!file)return alert("Gere uma imagem com IA ou escolha uma foto do produto.");
-  if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>5*1024*1024)return alert("Use JPG, PNG ou WebP com até 5 MB.");
-  const extension=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg";
-  const imagePath=currentUser.id+"/"+crypto.randomUUID()+"."+extension;
-  const {error:uploadError}=await supabaseClient.storage.from("product-images").upload(imagePath,file,{contentType:file.type,upsert:false});
-  if(uploadError)return alert("Falha ao enviar a foto: "+uploadError.message);
-  const {data:publicImage}=supabaseClient.storage.from("product-images").getPublicUrl(imagePath);
-  const payload={store_id:currentStore.id,name,description:document.getElementById("newDesc").value.trim(),category:document.getElementById("newCat").value,price,stock,image_url:publicImage.publicUrl,active:true};
-  const {error}=await supabaseClient.from("products").insert(payload);
-  if(error){await supabaseClient.storage.from("product-images").remove([imagePath]);return alert("Não foi possível publicar: "+error.message);}
-  ["newName","newPrice","newDesc"].forEach(id=>document.getElementById(id).value="");
-  document.getElementById("newImageFile").value="";
-  document.getElementById("imagePreview").style.display="none";
-  generatedImageDataURI=null;
-  document.getElementById("aiImageStatus").textContent="Preencha nome e descrição para criar uma imagem ilustrativa do produto.";
-  document.getElementById("newStock").value="0";
-  await loadProducts(); await loadMyProducts(); alert("Produto publicado no catálogo!");
-}
-function drawOrders(){document.getElementById("orders").innerHTML=orders.length?orders.map(o=>`<div class="row"><span><b>${safe(o.name)}</b><br><small>${safe(o.when)} • ${safe(o.delivery)}</small><br>${o.lines.map(x=>safe(x.name)+" ("+safe(x.variant||"Padrão")+") × "+x.q).join(", ")}</span><b>${money(o.total)}</b></div>`).join(""):"Nenhum pedido registrado."}
-async function loadProducts(){
- const {data,error}=await supabaseClient.from("products").select("id,name,description,category,price,stock,image_url,stores(name),product_variants(id,label,stock,active)").eq("active",true).order("created_at",{ascending:false});
- if(error){console.error(error);return;}
- products=(data||[]).map(p=>({id:p.id,name:p.name,store:p.stores?.name||"Loja local",cat:p.category,price:Number(p.price),desc:p.description||"",emoji:"🛍️",image_url:p.image_url,stock:p.stock,variants:(p.product_variants||[]).filter(v=>v.active).map(v=>({id:v.id,label:v.label,stock:v.stock}))}));
- render();drawCart();
+ if(!currentUser||!currentStore)return alert("Entre e cadastre sua loja primeiro.");
+ const name=document.getElementById("newName").value.trim(),price=Number(document.getElementById("newPrice").value);
+ const stock=Number(document.getElementById("newStock").value||0),rawVariants=document.getElementById("newVariants").value.trim();
+ if(!name||!Number.isFinite(price)||price<=0||!Number.isInteger(stock)||stock<0)return alert("Informe nome, preço e estoque válidos.");
+ const variants=[];
+ if(rawVariants){
+  for(const part of rawVariants.split(",")){const m=part.trim().match(/^(.+):([0-9]+)$/);if(!m)return alert("Use o formato opção:estoque, por exemplo P:5, M:8, G:3.");variants.push({label:m[1].trim(),stock:Number(m[2])});}
+  if(new Set(variants.map(v=>v.label.toLowerCase())).size!==variants.length)return alert("Não repita opções/tamanhos.");
+  if(variants.reduce((a,v)=>a+v.stock,0)!==stock)return alert("O estoque total deve ser igual à soma dos estoques por opção.");
+ }
+ let file=document.getElementById("newImageFile").files[0];
+ if(!file&&generatedImageDataURI)file=await(await fetch(generatedImageDataURI)).blob();
+ if(!file)return alert("Escolha uma foto ou gere uma imagem ilustrativa.");
+ if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>5*1024*1024)return alert("Use JPG, PNG ou WebP com até 5 MB.");
+ const extension=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg",imagePath=currentUser.id+"/"+crypto.randomUUID()+"."+extension;
+ const {error:uploadError}=await supabaseClient.storage.from("product-images").upload(imagePath,file,{contentType:file.type,upsert:false});
+ if(uploadError)return alert("Falha ao enviar a foto: "+uploadError.message);
+ const {data:publicImage}=supabaseClient.storage.from("product-images").getPublicUrl(imagePath);
+ const payload={store_id:currentStore.id,name,description:document.getElementById("newDesc").value.trim(),category:document.getElementById("newCat").value,price,stock,image_url:publicImage.publicUrl,active:true};
+ const {data:product,error}=await supabaseClient.from("products").insert(payload).select("id").single();
+ if(error){await supabaseClient.storage.from("product-images").remove([imagePath]);return alert("Não foi possível publicar: "+error.message);}
+ if(variants.length){
+  const {error:variantError}=await supabaseClient.from("product_variants").insert(variants.map(v=>({product_id:product.id,label:v.label,stock:v.stock,active:true})));
+  if(variantError){await supabaseClient.from("products").delete().eq("id",product.id);await supabaseClient.storage.from("product-images").remove([imagePath]);return alert("Falha ao salvar tamanhos/estoque: "+variantError.message);}
+ }
+ ["newName","newPrice","newDesc","newVariants"].forEach(id=>document.getElementById(id).value="");
+ document.getElementById("newImageFile").value="";document.getElementById("imagePreview").style.display="none";generatedImageDataURI=null;
+ document.getElementById("aiImageStatus").textContent="Preencha nome e descrição para criar uma imagem ilustrativa do produto.";
+ document.getElementById("newStock").value="0";
+ await loadProducts();await loadMyProducts();alert("Produto publicado no catálogo com estoque real!");
 }
 function showAuthState(){
   document.getElementById("authBox").style.display=currentUser?"none":"block";
